@@ -140,11 +140,12 @@ substrRight <- function(x, n){
 
 # Read waze data from s3 bucket; combines into single alerts dataframe and 
 # single jams spatial dataframe
-read_waze_s3 <- function(aws_access_key_id=NULL,
+read_waze_s3_monthy <- function(aws_access_key_id=NULL,
                          aws_secret_access_key=NULL,
                          s3_bucket=NULL,
                          start_yyyy_mm_dd_hh_mm=NULL,
                          end_yyyy_mm_dd_hh_mm=NULL,
+                         yyyy_mm = NULL,
                          mc_cores=1){
   
   #### Set AWS Kets
@@ -169,7 +170,7 @@ read_waze_s3 <- function(aws_access_key_id=NULL,
   }
   
   # Get Keys
-  s3_files <- get_bucket(bucket=s3_bucket_name, max=Inf, url_style="path", prefix=s3_bucket_path)
+  s3_files <- get_bucket(bucket=s3_bucket_name, max=Inf, url_style="path", prefix=paste0(s3_bucket_path, yyyy_mm))
   s3_keys <- lapply(1:length(s3_files), get_s3_keys, s3_files) %>% unlist
   s3_keys <- s3_keys[!endsWith(s3_keys, "/")] # remove keys that reference a folder (not a file within a folder)
   
@@ -181,6 +182,7 @@ read_waze_s3 <- function(aws_access_key_id=NULL,
     
     s3_key_datetimes <- gsub(".zip|.json","", s3_keys) %>% 
       substrRight(19) %>% 
+      str_replace_all(".*/", "") %>%
       gsub(pattern="_",replacement="-")
     
     start_yyyy_mm_dd_hh_mm <- paste0(start_yyyy_mm_dd_hh_mm,"_00") %>% 
