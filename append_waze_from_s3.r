@@ -77,9 +77,14 @@ read_waze_jsons_zipped_s3 <- function(s3_key){
 read_waze_json_s3 <- function(s3_key){
   object <- paste0("s3://",s3_key)
   
-  json <- get_object(object=object) %>% rawToChar  %>% fromJSON
+  json_raw <- get_object(object=object) %>% rawToChar  #%>% fromJSON
   
-  out <- process_waze_json(json)
+  # Check if blank
+  if(json_raw == ""){
+    out <- NULL
+  } else{
+    out <- process_waze_json(fromJSON(json_raw))
+  }
   
   return(out)
 }
@@ -204,9 +209,11 @@ read_waze_s3_monthy <- function(aws_access_key_id=NULL,
   
   #### Extract waze data as list of dataframes
   if(mc_cores > 1){
-    waze_output_list <- pbmclapply(s3_keys, read_waze_json_or_zipped_s3, mc.cores=mc_cores)
+    waze_output_list <- pbmclapply(s3_keys, read_waze_json_or_zipped_s3, mc.cores=mc_cores) %>% 
+      keep( ~ !is.null(.) )
   }else{
-    waze_output_list <- lapply(s3_keys, read_waze_json_or_zipped_s3)
+    waze_output_list <- lapply(s3_keys, read_waze_json_or_zipped_s3) %>% 
+      keep( ~ !is.null(.) )
   }
   
   #### Append waze files into single alerts dataframe and single jams spatial dataframe
