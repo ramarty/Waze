@@ -9,6 +9,7 @@ library(dplyr)
 library(rgdal)
 library(raster)
 library(pbmcapply)
+library(purrr)
 
 # Define Functions -------------------------------------------------------------
 
@@ -47,19 +48,19 @@ read_waze_jsons_zipped_s3 <- function(s3_key){
   jams_dataframe <- lapply(1:length(out_list), function(i) as.data.frame(out_list[[i]]$jams_sdf)) %>% bind_rows
   
   if(nrow(jams_dataframe) > 0){
-  
-  # List of geometries; if NULL, remove item from list
-  jams_sdf <- lapply(1:length(out_list), function(i){
-    if(nrow(out_list[[i]]$jams_sdf) == 0){
-      return(NULL)
-    } else{
-      return(extract_jams_geometry(out_list[[i]]$jams_sdf))
-    }
-  }) %>% 
-    unlist %>% # unlist removes NULL items in list
-    do.call(what="rbind")
-  jams_sdf@data <- jams_dataframe
-  crs(jams_sdf) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+    
+    # List of geometries; if NULL, remove item from list
+    jams_sdf <- lapply(1:length(out_list), function(i){
+      if(nrow(out_list[[i]]$jams_sdf) == 0){
+        return(NULL)
+      } else{
+        return(extract_jams_geometry(out_list[[i]]$jams_sdf))
+      }
+    }) %>% 
+      unlist %>% # unlist removes NULL items in list
+      do.call(what="rbind")
+    jams_sdf@data <- jams_dataframe
+    crs(jams_sdf) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
   } else{
     jams_sdf <- NULL
   }
@@ -146,12 +147,12 @@ substrRight <- function(x, n){
 # Read waze data from s3 bucket; combines into single alerts dataframe and 
 # single jams spatial dataframe
 read_waze_s3_monthy <- function(aws_access_key_id=NULL,
-                         aws_secret_access_key=NULL,
-                         s3_bucket=NULL,
-                         start_yyyy_mm_dd_hh_mm=NULL,
-                         end_yyyy_mm_dd_hh_mm=NULL,
-                         yyyy_mm = NULL,
-                         mc_cores=1){
+                                aws_secret_access_key=NULL,
+                                s3_bucket=NULL,
+                                start_yyyy_mm_dd_hh_mm=NULL,
+                                end_yyyy_mm_dd_hh_mm=NULL,
+                                yyyy_mm = NULL,
+                                mc_cores=1){
   
   #### Set AWS Kets
   if(!is.null(aws_access_key_id) & !is.null(aws_secret_access_key)){
@@ -224,17 +225,24 @@ read_waze_s3_monthy <- function(aws_access_key_id=NULL,
   jams_dataframe <- lapply(1:length(waze_output_list), function(i) as.data.frame(waze_output_list[[i]]$jams_sdf)) %>% bind_rows
   
   # List of geometries; if NULL, remove item from list
-  jams_sdf <- lapply(1:length(waze_output_list), function(i){
-    if(is.null(waze_output_list[[i]]$jams_sdf)){
-      return(NULL)
-    } else{
-      return(extract_jams_geometry(waze_output_list[[i]]$jams_sdf))
-    }
-  }) %>% 
-    unlist %>% # unlist removes NULL items in list
-    do.call(what="rbind")
-  jams_sdf@data <- jams_dataframe
-  crs(jams_sdf) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+  
+  if(nrow(jams_dataframe) > 0){
+    
+    jams_sdf <- lapply(1:length(waze_output_list), function(i){
+      if(is.null(waze_output_list[[i]]$jams_sdf)){
+        return(NULL)
+      } else{
+        return(extract_jams_geometry(waze_output_list[[i]]$jams_sdf))
+      }
+    }) %>% 
+      unlist %>% # unlist removes NULL items in list
+      do.call(what="rbind")
+    jams_sdf@data <- jams_dataframe
+    crs(jams_sdf) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+    
+  } else{
+    jams_sdf <- jams_dataframe
+  }
   
   # TODO: Restrict by daterange here again, for both alerts_df and jams_sdf
   
