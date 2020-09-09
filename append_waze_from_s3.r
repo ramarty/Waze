@@ -94,6 +94,8 @@ read_waze_json_s3 <- function(s3_key){
       error = function(e){NULL}
     )
     
+    if(is.null(out)) print("Error! Skipped")
+    
 
   }
   
