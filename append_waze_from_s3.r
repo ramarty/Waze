@@ -82,9 +82,19 @@ read_waze_json_s3 <- function(s3_key){
   
   # Check if blank
   if(json_raw == ""){
-    out <- NULL
+    out <- NULL # Initialize output
+    print("Blank Json!")
   } else{
-    out <- process_waze_json(fromJSON(json_raw))
+    
+    ## Extract json data; if error, return NULL
+    out <- tryCatch(
+      {
+        process_waze_json(fromJSON(json_raw)) 
+      },
+      error = function(e){NULL}
+    )
+    
+
   }
   
   return(out)
